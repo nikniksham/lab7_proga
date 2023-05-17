@@ -11,7 +11,7 @@ import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-public class ServerLegacy {
+public class Server {
     private ServerSocket server; // серверсокет
     private Map<Socket, Map<BufferedReader, BufferedWriter>> clients;
     private Map<BufferedReader, BufferedWriter> loc;
@@ -20,7 +20,7 @@ public class ServerLegacy {
     private boolean run = true;
     private Manager manager;
 
-    public ServerLegacy() throws IOException {
+    public Server() throws IOException {
         clients = new HashMap<>();
         server = new ServerSocket(4004);
         server.setSoTimeout(1000);
