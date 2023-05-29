@@ -11,7 +11,7 @@ public class Human {
     public Human(int id, Timestamp date, String name) {
         birthday = date;
         this.name = name;
-        id = id;
+        this.id = id;
     }
 
     @Override

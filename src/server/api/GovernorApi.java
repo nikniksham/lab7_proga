@@ -1,9 +1,15 @@
 package server.api;
 
+import my_programm.enums.Climate;
+import my_programm.enums.StandardOfLiving;
+import my_programm.obj.City;
 import my_programm.obj.Human;
 
+import javax.swing.plaf.PanelUI;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.util.Map;
 
 public class GovernorApi extends BaseApi {
     public static Human get_governor(int governor_id) {
@@ -60,5 +66,27 @@ public class GovernorApi extends BaseApi {
             try { rs.close(); } catch(Exception e) { /*can't do anything */ }
         }
         return id;
+    }
+
+    public static String saveOrUpdate(Human gov) {
+        String result = "ok";
+        try {
+            con = DriverManager.getConnection(url, user, password);
+            stmt = con.createStatement();
+            rs = stmt.executeQuery("select * from governor where governor.id = " + gov.getId()+";");
+            if (rs.next()) {
+                stmt.executeUpdate("update governor set id = "+ gov.getId()+", name = '"+gov.getName()+"', birthday = '"+gov.getBirthday()+"' where governor.id = 1;");
+            }
+            stmt.executeUpdate("insert into governor (id, name, birthday) values ("+gov.getId()+", '"+gov.getName()+"', "+gov.getBirthday());
+        } catch (Exception e) { // SQLException sqlEx
+//            sqlEx.printStackTrace();
+            e.printStackTrace();
+            result = e.getMessage();
+        } finally {
+            try { con.close(); } catch(Exception e) { /*can't do anything */ }
+            try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
+            try { rs.close(); } catch(Exception e) { /*can't do anything */ }
+        }
+        return result;
     }
 }

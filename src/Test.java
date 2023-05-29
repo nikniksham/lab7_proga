@@ -11,8 +11,8 @@ public class Test {
     private static ResultSet rs;
 
     public static void main(String[] args) {
-        System.out.println(sha256("test123"));
-        System.out.println(sha256("test123"));
+//        System.out.println(sha256("test123"));
+//        System.out.println(sha256("test123"));
         String query = "select * from users";
         String query2 = "insert into users (login, password, last_ip, status) values ('niknik', '123456', '---', 0)";
 
@@ -26,7 +26,7 @@ public class Test {
                 String password = rs.getString(2);
                 String last_ip = rs.getString(3);
                 int status = rs.getInt(4);
-                System.out.println(name + " " + last_ip + " " + password + " " + status);
+//                System.out.println(name + " " + last_ip + " " + password + " " + status);
             }
 
         } catch (Exception e) { // SQLException sqlEx

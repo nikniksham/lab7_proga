@@ -28,6 +28,8 @@ public class City {
         if (population_p == null) {throw new RuntimeException("Население города не должно быть null");}
         if (population_p < 1) {throw new RuntimeException("Население города должна быть больше 0");}
         if (carCode_p < 1 || carCode_p > 1000) {throw new RuntimeException("Код автомобиля должен быть в диапозоне [1; 1000]");}
+        if (climate_p == null) {throw new RuntimeException("Климат должен быть не null");}
+        if (standardOfLiving_p == null) {throw new RuntimeException("Стандарт жизни должен быть не null");}
         this.id = id_p;
         this.setName(name_p);
         this.setCoordinates(coordinates_p);
@@ -38,7 +40,7 @@ public class City {
         this.setClimate(climate_p);
         this.setStandardOfLiving(standardOfLiving_p);
         this.setGovernor(governor_p);
-        this.setCreationDate((Timestamp) Calendar.getInstance().getTime());
+        this.setCreationDate(new Timestamp(System.currentTimeMillis()));
         this.creator_id = creator_id;
     }
 
@@ -137,7 +139,7 @@ public class City {
         return governor;
     }
 
-    private void setGovernor(Human governor) {
+    public void setGovernor(Human governor) {
         this.governor = governor;
     }
 

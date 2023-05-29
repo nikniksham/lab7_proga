@@ -4,186 +4,170 @@ import my_programm.CustomFileReader;
 import my_programm.Manager;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import server.api.UserApi;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.RecursiveTask;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class Server {
-    private ServerSocket server; // серверсокет
-    private Map<Socket, Map<BufferedReader, BufferedWriter>> clients;
-    private Map<BufferedReader, BufferedWriter> loc;
-    private Socket clientSocket;
-    private Date c_date;
+    private ServerSocket server;
     private boolean run = true;
+    private ThreadPoolExecutor clients;
     private Manager manager;
 
     public Server() throws IOException {
-        clients = new HashMap<>();
         server = new ServerSocket(4004);
-        server.setSoTimeout(1000);
-
-    }
-
-    public void start() throws IOException, NullPointerException {
-        System.out.println("Сервер запущен");
+        this.clients = new ThreadPoolExecutor(0, 20, 120L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
         manager = new Manager();
         manager.load_table();
 
-        try {
-            while (run) {
-                System.out.println("wtf");
-                try {
-                    CompletableFuture<Socket> waitNewClient = CompletableFuture.supplyAsync(() -> wait_new_client(server));
-                    while (!waitNewClient.isDone()) {
-                        for (Socket client : clients.keySet()) {
-                            Map<BufferedReader, BufferedWriter> buff = clients.get(client);
-                            BufferedReader in = buff.keySet().iterator().next();
-                            BufferedWriter out = buff.values().iterator().next();
-                            CompletableFuture<ArrayList<String>> waitMessage = CompletableFuture.supplyAsync(() -> wait_new_message(in));
+//        server.setSoTimeout(1000);
+    }
 
-                            c_date = new Date();
-                            out.write("Готов принимать данные\n");
-                            out.flush();
-                            while (!waitMessage.isDone()) {
-                                if (new Date().getTime() - c_date.getTime() > 1000) {
-                                    waitMessage.cancel(true);
-                                }
-                            }
+    public void start() throws NullPointerException {
+        ConnectionCatcher connectionCatcher = new ConnectionCatcher(clients, server, manager);
+        clients.submit(connectionCatcher);
+        System.out.println("Сервер запущен");
+        while (run) {
 
-                            if (!waitMessage.isCancelled()) {
-//                            System.out.println("!!!");
-                                ArrayList<String> commands = waitMessage.get();
-                                String ret = "";
-                                if (commands != null && commands.size() > 0) {
-//                                System.out.println("Получены сообщения:");
-                                    boolean jsonsend = false;
-                                    for (String com : commands) {
-                                        System.out.println(client + " --> " + com);
-                                        for (String s : manager.commandHandler(com)) {
-                                            if (s.strip().equals("отправить json")) {
-                                                jsonsend = true;
-                                            } else {
-                                                ret += s + "\n";
-                                            }
-                                        }
-                                    }
-                                    out.write(ret);
-                                    out.flush();
-                                    if (jsonsend) {
-//                                        OutputStreamWriter outputStreamWriter = new OutputStreamWriter(client.getOutputStream());
-                                        String jsonString = "";
-                                        try {
-                                            List<String> arr = CustomFileReader.readFile("sendData.json");
-                                            if (arr == null) {
-                                                throw new NullPointerException();
-                                            }
-                                            for (String s : arr) {
-                                                jsonString += s + "\n";
-                                            }
-                                            Object obj = new JSONParser().parse(jsonString);
-                                            JSONObject jo = (JSONObject) obj;
-//                                            out.write("Готов отпралять json\n");
-//                                            out.flush();
-                                            out.write(jo.toString() + "\n");
-                                            out.flush();
-//                                            outputStreamWriter.write(obj.toString() + "\n");
-//                                            outputStreamWriter.flush();
-                                        } catch (Exception e) {
-//                                            e.printStackTrace();
-                                        } finally {
-//                                            outputStreamWriter.close();
-//                                            out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
-//                                            System.out.println("!2344");
-                                        }
-                                    }
-//                                run = false;
-//                                break;
-                                }
-                            } else {
-//                                System.out.println("не поймали");
-                            }
-                        }
+        }
 
-                        if (!run) {
-                            break;
-                        }
+    }
+}
 
-                    }
+class ConnectionCatcher implements Runnable {
+    ThreadPoolExecutor clients;
+    ServerSocket server;
+    boolean run = true;
+    Manager manager;
+    public ConnectionCatcher(ThreadPoolExecutor clients, ServerSocket server, Manager manager) {
+        this.clients = clients;
+        this.server = server;
+        this.manager = manager;
+    }
 
-                    clientSocket = waitNewClient.get();
-                    if (clientSocket != null) {
-                        System.out.println("Кого-то поймали в свои сети...");
-                        System.out.println(clientSocket);
-                        loc = new HashMap<>();
-                        loc.put(new BufferedReader(new InputStreamReader(clientSocket.getInputStream())), new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream())));
-                        clients.put(clientSocket, loc);
-                    }
-                } catch (Exception e) {
-                    Socket gay = null;
-                    e.printStackTrace();
-                    for (Socket client : clients.keySet()) {
-                        try {
-                            Map<BufferedReader, BufferedWriter> buff = clients.get(client);
-                            BufferedWriter out = buff.values().iterator().next();
-                            out.write("проверка на гея\n");
-                            out.flush();
-                        } catch (Exception e2) {
-                            gay = client;
-                            System.out.println("гей детектед");
-                            break;
-                        }
-                    }
-                    if (gay != null) {
-                        Map<BufferedReader, BufferedWriter> buff = clients.get(gay);
-                        BufferedWriter out = buff.values().iterator().next();
-                        BufferedReader in = buff.keySet().iterator().next();
-                        out.close();
-                        in.close();
-                        clients.remove(gay);
-                        gay.close();
-                        System.out.println(clients.size() + " " + gay);
-                    }
-//                    System.out.println(e.getMessage());
+    @Override
+    public void run() {
+        while (run) {
+            try {
+                Socket newClient = server.accept();
+                if (newClient != null) {
+                    clients.submit(new Client(newClient, manager));
+//                    System.out.println("Новый клиент добавлен");
                 }
+            } catch (Exception e) {
+                System.out.println("Какая-то ошибка в получении клиента");
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+class Client implements Runnable {
+    Socket socket;
+    BufferedWriter writer;
+    BufferedReader reader;
+    Manager manager;
+
+    public Client(Socket socket, Manager manager) throws IOException {
+        this.manager = manager;
+        this.socket = socket;
+        reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+    }
+
+    public void run() {
+        try {
+            boolean jsonsend = false;
+            String message = reader.readLine();
+            System.out.println(message);
+            String[] messageList = message.split("\s{1,}");
+            if (messageList.length >= 3) {
+                StringBuilder answer = new StringBuilder("Неправильный логин или пароль\n");
+                int userStatus = UserApi.login(messageList[messageList.length - 2], messageList[messageList.length - 1]);
+                if (userStatus >= 0) {
+                    int userId = UserApi.getUserId(messageList[messageList.length - 2]);
+
+                    StringBuilder command = new StringBuilder();
+                    for (int i = 0; i < messageList.length - 2; i++) {
+                        command.append(messageList[i]).append(" ");
+                    }
+                    command.delete(command.length() - 1, command.length());
+
+                    answer = new StringBuilder();
+                    for (String s : manager.commandHandler(command.toString(), userStatus, userId)) {
+                        if (s.strip().equals("отправить json")) {
+                            jsonsend = true;
+                        } else {
+                            answer.append(s.strip()).append("\n");
+                        }
+                    }
+                } else {
+                    if (messageList[0].equals("register")) {
+                        answer.append(UserApi.register(messageList[1], messageList[2]));
+                    }
+                }
+                String ans = "";
+                if (jsonsend) {
+                    String jsonString = "";
+                    try {
+                        List<String> arr = CustomFileReader.readFile("sendData.json");
+                        for (String s : arr) {
+                            jsonString += s + "\n";
+                        }
+                        Object obj = new JSONParser().parse(jsonString);
+                        JSONObject jo = (JSONObject) obj;
+                        ans = jo.toString() + "\n";
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.out.println("Ошибка?!");
+                    }
+                } else {
+                    ans = answer.toString();
+                }
+                SendAnswer sendAnswer = new SendAnswer(socket, writer, ans);
+                sendAnswer.fork();
+                sendAnswer.join();
             }
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("Клиент сломался, пока пока");
         } finally {
-            if (manager.isChange_something()) {
-                manager.save("localsave.json");
-            }
-            System.out.println("Сервер выключен");
+            try {
+                reader.close();
+                writer.close();
+                socket.close();
+            } catch (Exception e) {}
         }
     }
+}
 
-    private static Socket wait_new_client(ServerSocket server) {
-        try {
-            return server.accept();
-        } catch (Exception e) {
-//            e.printStackTrace();
-//            System.out.println("Тоже выключаемся");
-        }
-        return null;
+class SendAnswer extends RecursiveTask<String> {
+    Socket socket;
+    BufferedWriter writer;
+    String message;
+    public SendAnswer(Socket socket, BufferedWriter writer, String message) {
+        this.socket = socket;
+        this.writer = writer;
+        this.message = message;
     }
-
-    private static ArrayList<String> wait_new_message(BufferedReader in) {
+    @Override
+    protected String compute() {
+        String result = "success";
         try {
-            ArrayList<String> commands = new ArrayList();
-            for (Iterator<String> it = in.lines().iterator(); it.hasNext(); ) {
-//                System.out.println("!!!!!!!!!!!!!!");
-                String s = it.next();
-                if (s.equals("end")) {break;}
-                commands.add(s);
-            }
-//            System.out.println(commands);
-            return commands;
+            writer.write(message + "end\n");
+            writer.flush();
         } catch (Exception e) {
-//            e.printStackTrace();
-//            System.out.println("Выключаемся без лишних вопросов и поломок");
+            System.out.println("Проблема при отправке сообщения");
+            result = null;
         }
-        return null;
+        return result;
     }
 }

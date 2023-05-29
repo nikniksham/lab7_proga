@@ -1,124 +1,108 @@
 package client;
-import my_programm.CustomFileReader;
+
+import org.w3c.dom.ls.LSOutput;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 public class Client {
-
-    private Socket clientSocket;
+    private String login;
+    private String password;
+    Socket clientSocket;
+    private Scanner scanner;
     private BufferedReader reader;
-    private BufferedReader in;
-    private BufferedWriter out;
-    private  List<String> commands;
-
+    private BufferedWriter writer;
+    private boolean run = true;
+    private String message;
     public Client() {
-        System.out.println("Клиент запущен");
-        commands = new ArrayList<>();
+        scanner = new Scanner(System.in);
+        System.out.println("Укажите логин");
+        this.login = scanner.nextLine();
+        System.out.println("Укажите пароль");
+        this.password = codeToSHA256(scanner.nextLine());
+        System.out.println("Это новый аккаунт? (нажмите enter, если нет)");
+        if (!scanner.nextLine().equals("")) {
+            this.message = "register " + login + " " + password;
+        }
     }
 
-    public void start() throws InterruptedException {
-        while (true) {
+    private void connectToTheServer() {
+        try {
+            writer.close();
+            reader.close();
+            clientSocket.close();
+        } catch (Exception e) {}
+
+        try {
+            clientSocket = new Socket("localhost", 4004);
+            reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+        } catch (Exception e) {
+            System.out.println("Что-то пошло не так");
+            e.printStackTrace();
+        }
+    }
+    public void start() {
+        while (run) {
+            if (message == null) {
+                message = scanner.nextLine();
+            }
+            this.connectToTheServer();
             try {
-                clientSocket = new Socket("localhost", 4004); // коннектимся
-                System.out.println("Мы подключились к серверу");
-                reader = new BufferedReader(new InputStreamReader(System.in));
-                in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-//            InputStreamReader inputStreamReader = new InputStreamReader(clientSocket.getInputStream());
+                writer.write(message + " " + login + " " + password + "\n");
+                writer.flush();
 
-                boolean run = true;
-                while (run) {
-                    CompletableFuture<String> waitMessageFromServer = CompletableFuture.supplyAsync(() -> wait_new_message(in));
+                CompletableFuture<String> waitMessageFromServer = CompletableFuture.supplyAsync(() -> wait_new_message(reader));
 
-                    Date c_date = new Date();
-                    while (!waitMessageFromServer.isDone()) {
-                        do {
-                            if (new Date().getTime() - c_date.getTime() > 300) {
-                                waitMessageFromServer.cancel(true);
-                            }
-                            try {
-                                if (reader.ready()) {
-                                    commands.add(reader.readLine());
-                                }
-                            } catch (Exception e) {
-//                            System.out.println("ConsoleInputReadTask() cancelled");
-                            }
-                        } while (!waitMessageFromServer.isDone());
-                    }
-
-                    if (waitMessageFromServer.isCancelled()) {
-                        continue;
-                    }
-
-                    String mes = waitMessageFromServer.get();
-
-                    if (mes != null) {
-                        if (mes.strip().equals("Готов принимать данные")) {
-                            String s = "";
-                            for (String l : commands) {
-                                if (l.strip().equals("exit")) {
-                                    System.exit(0);
-                                } else if (l.strip().contains("execute_script ")) { // execute_script smert.txt
-                                    s += get_command(l, new ArrayList<>());
-                                } else if (!l.strip().equals("save")) {
-                                    s += l + "\n";
-                                }
-                            }
-//                            if (s != "") {
-//                                System.out.println(s);
-//                            }
-                            commands.clear();
-                            out.write(s + "end\n");
-                            out.flush();
-                        } else if (mes.strip().equals("error")) {
-                            run = false;
-                        } else {
-                            System.out.println(mes);
-                        }
+                Date c_date = new Date();
+                while (!waitMessageFromServer.isDone()) {
+                    if (new Date().getTime() - c_date.getTime() > 3000) {
+                        System.out.println("Превышено время ожидания ответа от сервера");
                     }
                 }
-//                (input.contains("execute_script ")) {
-//                    return this.get_list_of_commands(input.split("\s")[1]);
+
+                String answer = waitMessageFromServer.get();
+                if (answer != null) {
+                    System.out.print(answer);
+                }
+                message = null;
             } catch (Exception e) {
-//            e.printStackTrace();
-//                System.out.println("Не работайн");
-            } finally {
-                System.out.println("попытка подключения");
-                Thread.sleep(1500);
+                System.out.println("Сломалися");
+//                e.printStackTrace();
             }
         }
     }
-
-    private static String get_command(String command, ArrayList<String> blacklist) {
-        String filename = command.split("\s")[1];
-        String com = "";
-        List<String> arr = CustomFileReader.readFile(filename);
-        if (arr == null) {return "";}
-        for (String s : arr) {
-            if (s.contains("execute_script ") && !blacklist.contains(s.split("\s")[1])) {
-                blacklist.add(s.split("\s")[1]);
-                com += get_command(s, blacklist);
-            } else {
-                com += s + "\n";
-            }
-        }
-        return com;
-    }
-
-    private static String wait_new_message(BufferedReader in) {
+    private static String wait_new_message(BufferedReader reader) {
         try {
-            return in.readLine();
+            StringBuilder answer = new StringBuilder();
+            for (Iterator<String> it = reader.lines().iterator(); it.hasNext(); ) {
+                String s = it.next();
+                if (s.equals("end")) {break;}
+                answer.append(s).append("\n");
+            }
+            return answer.toString();
         } catch (Exception e) {
-//            e.printStackTrace();
-//            System.out.println("Сервер умер, а в месте с ним и мы...");
-//            System.exit(0);
-//            throw new RuntimeException();
             System.out.println("Потеря соединения с сервером");
             return "error";
         }
 //        return null;
+    }
+
+    private String codeToSHA256(String text) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(text.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            System.out.println("это как?");
+        }
+        return null;
     }
 }

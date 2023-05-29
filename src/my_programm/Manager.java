@@ -7,6 +7,7 @@ import my_programm.obj.Human;
 import server.api.BaseApi;
 import server.api.CityApi;
 import server.api.GovernorApi;
+import server.api.UserApi;
 
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -25,7 +26,7 @@ public class Manager {
         dateIni = Calendar.getInstance().getTime();
     }
 
-    public List<String> commandHandler(String input) throws IOException {
+    public List<String> commandHandler(String input, int userStatus, int userId) throws IOException {
         arr.clear();
         if (input.equals("help")) {
             this.help();
@@ -36,7 +37,7 @@ public class Manager {
         } else if (input.equals("clear")) {
             this.clear();
         } else if (input.contains("insert ")) {
-            this.insert_id(input.split("\s")[1], input.substring(input.indexOf("{")));
+            this.insert_id(input.split("\s")[1], input.substring(input.indexOf("{\"")), userId);
         } else if (input.contains("remove_key ")) {
             this.remove_key(input.split("\s")[1]);
         } else if (input.equals("exit")) {
@@ -44,23 +45,28 @@ public class Manager {
         } else if (input.equals("print_unique_climate")) {
             this.print_unique_climate();
         } else if (input.contains("update ")) {
-            this.update_id(input.split("\s")[1], input.substring(input.indexOf("{")));
+            this.update_id(input.split("\s")[1], input.substring(input.indexOf("{\"")), userId);
         } else if (input.contains("remove_lower ")) {
             this.remove_lower(input.split("\s")[1]);
         } else if (input.contains("replace_if_lower ")) {
-            this.replace_if_lower(input.split("\s")[1], input.substring(input.indexOf("{")));
+            this.replace_if_lower(input.split("\s")[1], input.substring(input.indexOf("{\"")), userId);
         } else if (input.contains("remove_greater_key ")) {
             this.remove_greater_key(input.split("\s")[1]);
         } else if (input.equals("sum_of_meters_above_sea_level")) {
             this.sum_of_meters_above_sea_level();
         } else if (input.equals("print_field_descending_governor")) {
             this.print_field_descending_governor();
-        } else if (input.contains("save ")) {
-//            this.save(input.split("\s")[1]);
+        } else if (input.contains("save")) {
+            if (userStatus > 0) {
+                CityApi.saveTable(this.table);
+                arr.add("Таблица сохранена");
+            } else {
+                arr.add("У вас недостаточно прав для этого");
+            }
         } else if (input.contains("execute_script ")) {
             return this.get_list_of_commands(input.split("\s")[1]);
         } else {
-            arr.add("Я не знаю команды " + input + ", для справки по командам напишите help");
+            arr.add("Я не знаю команды \"" + input + "\", для справки по командам напишите help");
         }
         return arr;
     }
@@ -85,7 +91,7 @@ public class Manager {
                 "print_field_descending_governor : вывести значения поля governor всех элементов в порядке убывания\n" +
                 "*Под {filename} подразумевается название файла\n" +
                 "*Под {id} подразумевается id города в таблице\n" +
-                "*Под {element} подразумевается {<String>name, [<Integer>x, <Integer>y] <Long>area, <Long>population, <Integer>MASL, <Integer>carCode, <Integer>[null/1-5], <Integer>[null/1-5], [null/<Integer>year, <Integer>month, <Integer>day, <String>name_gov]}");
+                "*Под {element} подразумевается {<String>name, [<Integer>x, <Integer>y] <Long>area, <Long>population, <Integer>MASL, <Integer>carCode, <Integer>[1-5], <Integer>[1-5], [null/[<Integer>year, <Integer>month, <Integer>day, <String>name_gov]]}");
     }
 
     public void info() {
@@ -122,7 +128,8 @@ public class Manager {
         change_something = true;
     }
 
-    public void insert_id(String sid, String element) {
+    public void insert_id(String sid, String element, int userId) {
+//        System.out.println(sid + "|||" + element);
         int id = Pomogtor.StringToInt(sid);
         if (id < 0) {
             throw new RuntimeException("id должен быть больше 0");
@@ -130,9 +137,12 @@ public class Manager {
             throw new RuntimeException("Этот id уже занят");
         } else {
             int newid = CityApi.get_next_id();
-            table.put(newid, this.create_city_by_string(element, newid));
-            arr.add("Новый город добавлен " + id);
-            change_something = true;
+            City newCity = this.create_city_by_string(element, newid, userId);
+            if (newCity != null) {
+                table.put(newid, newCity);
+                arr.add("Новый город добавлен " + id);
+                change_something = true;
+            }
         }
     }
 
@@ -162,14 +172,17 @@ public class Manager {
         }
     }
 
-    public void update_id(String sid, String string) {
+    public void update_id(String sid, String string, int userId) {
         int id = Pomogtor.StringToInt(sid);
         if (!table.containsKey(id)) {
             throw new RuntimeException("По этому id ничего не найдено");
         } else {
-            table.replace(id, this.create_city_by_string(string, id));
-            arr.add("Новое значение задано");
-            change_something = true;
+            City newCity = this.create_city_by_string(string, id, userId);
+            if (newCity != null) {
+                table.replace(id, newCity);
+                arr.add("Новое значение задано");
+                change_something = true;
+            }
         }
     }
 
@@ -196,14 +209,14 @@ public class Manager {
         }
     }
 
-    public void replace_if_lower(String sid, String string) {
+    public void replace_if_lower(String sid, String string, int userId) {
         int id = Pomogtor.StringToInt(sid);
         if (!table.containsKey(id)) {
             throw new RuntimeException("По этому id ничего не найдено");
         } else {
             City old_city = table.get(id);
-            City new_city = create_city_by_string(string, id);
-            if (old_city.get_num_for_srav() > new_city.get_num_for_srav()) {
+            City new_city = create_city_by_string(string, id, userId);
+            if (new_city != null && old_city.get_num_for_srav() > new_city.get_num_for_srav()) {
                 table.replace(id, new_city);
                 arr.add("Город заменён");
                 change_something = true;
@@ -250,7 +263,7 @@ public class Manager {
         return CustomFileReader.readFile(filename);
     }
 
-    private City create_city_by_string(String string, int newid) {
+    private City create_city_by_string(String string, int newid, int userId) {
 //         {name [x y] area population MASL carCode [null/1-5] [null/1-5] [null/year month day name_gov]}
         boolean climate_is_set = false, level_is_set = false;
         String name = null, gov_name = "";
@@ -321,7 +334,12 @@ public class Manager {
         }
         City city;
         int CREATOR = 1;
-        city = new City(newid, name, coordinates, area, population, MASL, carCode, climate, standardOfLiving, gover, CREATOR);
+        try {
+            city = new City(newid, name, coordinates, area, population, MASL, carCode, climate, standardOfLiving, gover, userId);
+        } catch (Exception e) {
+            arr.add(e.getMessage());
+            return null;
+        }
 //        System.out.println(city);
         return city;
     }
@@ -337,8 +355,9 @@ public class Manager {
         for (int i = cities.size() - 1; i > -1; --i) {
             City city = cities.get(i);
             strings.add("    {");
-            strings.add("      \"name\": " + '"' + city.getName().replace("\"", "'").replace("\\", "/") + "\",");
-            strings.add("      \"coordinates\": '" + city.getCoordinates() + "',");
+            strings.add("      \"id\": " + city.getId() + ",");
+            strings.add("      \"name\": " + city.getName() + ",");
+            strings.add("      \"coordinates\": \"" + city.getCoordinates() + "\",");
 //            strings.add("      \"coordinates\": [");
 //            strings.add("        "+city.getCoordinates().getX()+",");
 //            strings.add("        "+city.getCoordinates().getY());
@@ -347,6 +366,7 @@ public class Manager {
             strings.add("      \"population\": " + city.getPopulation() + ",");
             strings.add("      \"metersAboveSeaLevel\": " + city.getMetersAboveSeaLevel() + ",");
             strings.add("      \"carCode\": " + city.getCarCode() + ",");
+            strings.add("      \"creator_id\": " + city.getCreator_id() + ",");
             if (city.getClimate() != null) {
                 strings.add("      \"Climate\": " + Climate.getIdByName(city.getClimate()) + ",");
             } else {
@@ -404,7 +424,7 @@ class Pomogtor {
     }
 
     public static String StringToNormalString(String s) {
-        return s.replace(",", "").replace("\"", "").strip();
+        return s.replace(",", "").replace("\"", "").replace("{", "").replace("}", "").strip();
     }
 
     public static String StringToString(String string, String[] extra) {

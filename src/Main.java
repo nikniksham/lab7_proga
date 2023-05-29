@@ -1,3 +1,4 @@
+import server.Server;
 import server.api.UserApi;
 
 import java.io.IOException;
@@ -7,6 +8,8 @@ public class Main {
 //        Server server = new Server();
 //        server.start();
 //        System.out.println(UserApi.register("aaaa3", "asfsaf"));
-        System.out.println(UserApi.login("aaaa3", "asfsaf"));
+//        System.out.println(UserApi.login("aaaa3", "asfsaf"));
+        Server server = new Server();
+        server.start();
     }
 }

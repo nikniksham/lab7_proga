@@ -27,18 +27,42 @@ public class UserApi extends BaseApi {
         return result;
     }
 
-    public static boolean login(String login, String user_password) {
-        String query = "select users.password from users where users.login = '"+login+"' limit 1";
+    public static int login(String login, String user_password) {
+        String query = "select users.password, users.status from users where users.login = '"+login+"' limit 1";
 //        System.out.println(query);
-        boolean res = false;
+        int res = -1;
         try {
             con = DriverManager.getConnection(url, user, password);
             stmt = con.createStatement();
+            System.out.println(query);
             rs = stmt.executeQuery(query);
-            while (rs.next()) {
-//                System.out.println(rs.getString(1) + " " + user_password);
-                res = rs.getString(1).equals(user_password);
+            rs.next();
+            if (rs.getString(1).equals(user_password)) {
+                res = rs.getInt(2);
             }
+
+        } catch (Exception e) { // SQLException sqlEx
+//            sqlEx.printStackTrace();
+            e.printStackTrace();
+        } finally {
+            try { con.close(); } catch(Exception e) { /*can't do anything */ }
+            try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
+            try { rs.close(); } catch(Exception e) { /*can't do anything */ }
+        }
+        return res;
+    }
+
+    public static int getUserId(String login) {
+        String query = "select users.id from users where users.login = '"+login+"' limit 1";
+//        System.out.println(query);
+        int res = -1;
+        try {
+            con = DriverManager.getConnection(url, user, password);
+            stmt = con.createStatement();
+            System.out.println(query);
+            rs = stmt.executeQuery(query);
+            rs.next();
+            res = rs.getInt(1);
 
         } catch (Exception e) { // SQLException sqlEx
 //            sqlEx.printStackTrace();

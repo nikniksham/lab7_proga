@@ -21,8 +21,8 @@ public class BaseApi {
             stmt.executeUpdate("ALTER SEQUENCE CitySeq RESTART;");
             stmt.executeUpdate("ALTER SEQUENCE GoverSeq RESTART;");
             stmt.executeUpdate("ALTER SEQUENCE GoverSeq RESTART;");
-            stmt.executeUpdate("DROP TABLE governor");
-            stmt.executeUpdate("DROP TABLE city");
+            stmt.executeUpdate("DELETE FROM governor;");
+            stmt.executeUpdate("DELETE FROM city;");
 
         } catch (Exception e) { // SQLException sqlEx
 //            sqlEx.printStackTrace();

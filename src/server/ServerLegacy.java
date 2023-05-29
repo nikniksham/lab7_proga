@@ -62,7 +62,7 @@ public class ServerLegacy {
                                     boolean jsonsend = false;
                                     for (String com : commands) {
                                         System.out.println(client + " --> " + com);
-                                        for (String s : manager.commandHandler(com)) {
+                                        for (String s : manager.commandHandler(com, 1, 1)) {
                                             if (s.strip().equals("отправить json")) {
                                                 jsonsend = true;
                                             } else {
