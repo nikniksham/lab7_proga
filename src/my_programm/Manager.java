@@ -27,46 +27,51 @@ public class Manager {
     }
 
     public List<String> commandHandler(String input, int userStatus, int userId) throws IOException {
-        arr.clear();
-        if (input.equals("help")) {
-            this.help();
-        } else if (input.equals("info")) {
-            this.info();
-        } else if (input.equals("show")) {
-            this.show();
-        } else if (input.equals("clear")) {
-            this.clear();
-        } else if (input.contains("insert ")) {
-            this.insert_id(input.split("\s")[1], input.substring(input.indexOf("{\"")), userId);
-        } else if (input.contains("remove_key ")) {
-            this.remove_key(input.split("\s")[1]);
-        } else if (input.equals("exit")) {
+        try {
+            arr.clear();
+            if (input.equals("help")) {
+                this.help();
+            } else if (input.equals("info")) {
+                this.info();
+            } else if (input.equals("show")) {
+                this.show();
+            } else if (input.equals("clear")) {
+                this.clear(userStatus);
+            } else if (input.contains("create ")) {
+                this.create(input.substring(input.indexOf("{\"")), userId);
+            } else if (input.contains("remove_key ")) {
+                this.remove_key(input.split("\s")[1], userStatus, userId);
+            } else if (input.equals("exit")) {
 //            System.exit(0);
-        } else if (input.equals("print_unique_climate")) {
-            this.print_unique_climate();
-        } else if (input.contains("update ")) {
-            this.update_id(input.split("\s")[1], input.substring(input.indexOf("{\"")), userId);
-        } else if (input.contains("remove_lower ")) {
-            this.remove_lower(input.split("\s")[1]);
-        } else if (input.contains("replace_if_lower ")) {
-            this.replace_if_lower(input.split("\s")[1], input.substring(input.indexOf("{\"")), userId);
-        } else if (input.contains("remove_greater_key ")) {
-            this.remove_greater_key(input.split("\s")[1]);
-        } else if (input.equals("sum_of_meters_above_sea_level")) {
-            this.sum_of_meters_above_sea_level();
-        } else if (input.equals("print_field_descending_governor")) {
-            this.print_field_descending_governor();
-        } else if (input.contains("save")) {
-            if (userStatus > 0) {
-                CityApi.saveTable(this.table);
-                arr.add("Таблица сохранена");
+            } else if (input.equals("print_unique_climate")) {
+                this.print_unique_climate();
+            } else if (input.contains("update ")){
+                this.update_id(input.split("\s")[1], input.substring(input.indexOf("{\"")), userStatus, userId);
+            } else if (input.contains("remove_lower ")) {
+                this.remove_lower(input, userStatus, userId);
+            } else if (input.contains("replace_if_lower ")) {
+                this.replace_if_lower(input.split("\s")[1], input.substring(input.indexOf("{\"")), userStatus, userId);
+            } else if (input.contains("remove_greater_key ")) {
+                this.remove_greater_key(input.split("\s")[1], userStatus, userId);
+            } else if (input.equals("sum_of_meters_above_sea_level")) {
+                this.sum_of_meters_above_sea_level();
+            } else if (input.equals("print_field_descending_governor")) {
+                this.print_field_descending_governor();
+            } else if (input.contains("save")) {
+                if (userStatus > 0) {
+                    CityApi.saveTable(this.table);
+                    arr.add("Таблица сохранена");
+                } else {
+                    arr.add("У вас недостаточно прав для этого");
+                }
+            } else if (input.contains("execute_script ")) {
+                return this.get_list_of_commands(input.split("\s")[1]);
             } else {
-                arr.add("У вас недостаточно прав для этого");
+                arr.add("Я не знаю команды \"" + input + "\", для справки по командам напишите help");
             }
-        } else if (input.contains("execute_script ")) {
-            return this.get_list_of_commands(input.split("\s")[1]);
-        } else {
-            arr.add("Я не знаю команды \"" + input + "\", для справки по командам напишите help");
+        } catch (Exception e) {
+            arr.add(e.getMessage());
+//            e.printStackTrace();
         }
         return arr;
     }
@@ -75,14 +80,13 @@ public class Manager {
         arr.add("help : вывести справку по доступным командам\n" +
                 "info : вывести в стандартный поток вывода информацию о коллекции (тип, дата инициализации, количество элементов и т.д.)\n" +
                 "show : вывести в стандартный поток вывода все элементы коллекции в строковом представлении\n" +
-                "load_new_table {filename} : вывести в стандартный поток вывода все элементы коллекции в строковом представлении\n" +
-                "insert {id} {element} : создаст новый элемент с заданными параметрами\n" +
+                "create {element} : создаст новый элемент с заданными параметрами\n" +
                 "update {id} {element} : откроет меню создания нового элемента, для замены старого по id\n" +
                 "remove_key {id} : удалить элемент из коллекции по его ключу\n" +
                 "clear : очистить коллекцию\n" +
-                "save {filename} : сохранить коллекцию в файл\n" +
+                "save : сохранить коллекцию в базу данных\n" +
                 "execute_script {filename} : считать и исполнить скрипт из указанного файла. В скрипте содержатся команды в таком же виде, в котором их вводит пользователь в интерактивном режиме.\n" +
-                "exit : завершить программу (без сохранения в файл)\n" +
+                "exit : закрыть клиент\n" +
                 "remove_lower {element}: удалить из коллекции все элементы, меньшие чем заданный\n" +
                 "replace_if_lower {id} {element} : заменить значение по ключу, если новое созданное значение меньше старого (по выбранному параметру)\n" +
                 "remove_greater_key {id} : удалить из коллекции все элементы, ключ которых превышает заданный\n" +
@@ -121,29 +125,26 @@ public class Manager {
 //        }
     }
 
-    public void clear() {
-        table.clear();
-        BaseApi.clear();
-        arr.add("Таблица очищена");
-        change_something = true;
+    public void clear(int userStatus) {
+        if (userStatus > 0) {
+            table.clear();
+            BaseApi.clear();
+            arr.add("Таблица очищена");
+            change_something = true;
+        } else {
+            arr.add("У вас недостаточно прав для этого");
+        }
     }
 
-    public void insert_id(String sid, String element, int userId) {
-//        System.out.println(sid + "|||" + element);
-        int id = Pomogtor.StringToInt(sid);
-        if (id < 0) {
-            throw new RuntimeException("id должен быть больше 0");
-        } else if (table.containsKey(id)) {
-            throw new RuntimeException("Этот id уже занят");
-        } else {
-            int newid = CityApi.get_next_id();
-            City newCity = this.create_city_by_string(element, newid, userId);
-            if (newCity != null) {
-                table.put(newid, newCity);
-                arr.add("Новый город добавлен " + id);
-                change_something = true;
-            }
+    public void create(String element, int userId) {
+        int newid = CityApi.get_next_id();
+        City newCity = this.create_city_by_string(element, newid, userId);
+        if (newCity != null) {
+            table.put(newid, newCity);
+            arr.add("Новый город добавлен " + newid);
+            change_something = true;
         }
+
     }
 
     public void print_unique_climate() {
@@ -156,64 +157,61 @@ public class Manager {
             Climate climate = entry.getValue().getClimate();
             if (climate != null && !arr.contains(climate)) {
                 arr.add(climate);
-                arr.add(climate);
             }
+        }
+        for (Climate cl : arr) {
+            this.arr.add(cl.name() + "\n");
         }
     }
 
-    public void remove_key(String sid) {
+    public void remove_key(String sid, int userStatus, int userId) {
         int id = Pomogtor.StringToInt(sid);
         if (table.containsKey(id)) {
-            table.remove(id);
-            arr.add("Город удалён");
-            change_something = true;
+            if (userStatus > 0 || userId == table.get(id).getCreator_id()) {
+                table.remove(id);
+                arr.add("Город удалён");
+                change_something = true;
+            } else {
+                arr.add("У вас недостаточно прав для этого");
+            }
         } else {
             arr.add("Не найден город с таким id");
         }
     }
 
-    public void update_id(String sid, String string, int userId) {
+    public void update_id(String sid, String string, int userStatus, int userId) {
         int id = Pomogtor.StringToInt(sid);
         if (!table.containsKey(id)) {
             throw new RuntimeException("По этому id ничего не найдено");
-        } else {
+        } else if (userStatus > 0 || userId == table.get(id).getCreator_id()) {
             City newCity = this.create_city_by_string(string, id, userId);
             if (newCity != null) {
                 table.replace(id, newCity);
                 arr.add("Новое значение задано");
                 change_something = true;
             }
+        } else {
+            arr.add("У вас недостаточно прав для этого");
         }
     }
 
-    public void remove_lower(String sid) {
-        int id = Pomogtor.StringToInt(sid);
-        if (!table.containsKey(id)) {
-            throw new RuntimeException("По этому id ничего не найдено");
-        } else {
-            long num = table.get(id).get_num_for_srav();
-            ArrayList<City> arr_val = new ArrayList<>();
-            ArrayList<Integer> arr_key = new ArrayList<>();
-            for (Map.Entry<Integer,City> entry : table.entrySet()) {
-                arr_val.add(entry.getValue());
-                arr_key.add(entry.getKey());
+    public void remove_lower(String string, int userStatus, int userId) {
+        City newCity = this.create_city_by_string(string, 521251251, userId);
+        long num = newCity.get_num_for_srav();
+        for (Map.Entry<Integer,City> entry : table.entrySet()) {
+            if (entry.getValue().get_num_for_srav() < num && (userStatus > 0 || userId == entry.getValue().getCreator_id())) {
+                table.remove(entry.getKey());
             }
-
-            for (int i = 0; i < arr_key.size(); ++i) {
-                if (arr_val.get(i).get_num_for_srav() < num) {
-                    table.remove(arr_key.get(i));
-                }
-            }
-            arr.add("Все лишние города удалены");
-            change_something = true;
         }
+        arr.add("Все лишние города (на которые у вас были права) удалены");
+        change_something = true;
     }
 
-    public void replace_if_lower(String sid, String string, int userId) {
+    public void replace_if_lower(String sid, String string, int userStatus, int userId) {
         int id = Pomogtor.StringToInt(sid);
         if (!table.containsKey(id)) {
             throw new RuntimeException("По этому id ничего не найдено");
-        } else {
+        } else if (userStatus > 0 || userId == table.get(id).getCreator_id()) {
             City old_city = table.get(id);
             City new_city = create_city_by_string(string, id, userId);
             if (new_city != null && old_city.get_num_for_srav() > new_city.get_num_for_srav()) {
@@ -223,17 +221,19 @@ public class Manager {
                 return;
             }
             arr.add("Город не заменён");
+        } else {
+            arr.add("У вас недостаточно прав для этого");
         }
     }
 
-    public void remove_greater_key(String sid) {
+    public void remove_greater_key(String sid, int userStatus, int userId) {
         int id = Pomogtor.StringToInt(sid);
         ArrayList<Integer> arr_key = new ArrayList<>();
         for (Map.Entry<Integer,City> entry : table.entrySet()) {
             arr_key.add(entry.getKey());
         }
         for (Integer integer : arr_key) {
-            if (integer > id) {
+            if (integer > id && (userStatus > 0 || userId == table.get(id).getCreator_id())) {
                 table.remove(integer);
             }
         }
@@ -255,7 +255,12 @@ public class Manager {
         }
 
         for (Map.Entry<Integer,City> entry : table.entrySet()) {
-            arr.add(entry.getValue().getGovernor().toString());
+            if (entry.getValue().getGovernor() != null) {
+                arr.add(entry.getValue().getGovernor().toString());
+            }
+        }
+        if (arr.isEmpty()) {
+            arr.add("Нету губернаторов");
         }
     }
 

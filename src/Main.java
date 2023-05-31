@@ -1,4 +1,5 @@
 import server.Server;
+import server.api.BaseApi;
 import server.api.UserApi;
 
 import java.io.IOException;
@@ -9,6 +10,7 @@ public class Main {
 //        server.start();
 //        System.out.println(UserApi.register("aaaa3", "asfsaf"));
 //        System.out.println(UserApi.login("aaaa3", "asfsaf"));
+//        BaseApi.password = args[0];
         Server server = new Server();
         server.start();
     }

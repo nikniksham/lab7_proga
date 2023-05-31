@@ -4,14 +4,20 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class BaseApi {
+//    protected static String user = "s367635"; // для студс
     protected static String user = "postgres";
+//    public static String password = ""; // пароль для studs базы данных
     protected static String password = "root";
+//    protected static String url = "jdbc:postgresql://pg:5432/studs"; // для студс
     protected static String url = "jdbc:postgresql://localhost:5432/superpuper";
     protected static Connection con;
     protected static Statement stmt;
     protected static ResultSet rs;
+    protected static Lock R_LOCK = new ReentrantLock();
 
     public static void clear() {
 

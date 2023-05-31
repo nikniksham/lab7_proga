@@ -13,6 +13,7 @@ import java.util.Map;
 
 public class GovernorApi extends BaseApi {
     public static Human get_governor(int governor_id) {
+        R_LOCK.lock();
         String query = "select * from governor where governor.id = " + governor_id + ";";
         Human governor = null;
         try {
@@ -41,12 +42,13 @@ public class GovernorApi extends BaseApi {
                 rs.close();
             } catch (Exception e) { /*can't do anything */ }
         }
-
+        R_LOCK.unlock();
         return governor;
 
     }
 
     public static int get_next_id() {
+        R_LOCK.lock();
         String query = "SELECT nextval('GoverSeq');";
         int id = 0;
         try {
@@ -65,10 +67,12 @@ public class GovernorApi extends BaseApi {
             try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
             try { rs.close(); } catch(Exception e) { /*can't do anything */ }
         }
+        R_LOCK.unlock();
         return id;
     }
 
     public static String saveOrUpdate(Human gov) {
+        R_LOCK.lock();
         String result = "ok";
         try {
             con = DriverManager.getConnection(url, user, password);
@@ -87,6 +91,7 @@ public class GovernorApi extends BaseApi {
             try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
             try { rs.close(); } catch(Exception e) { /*can't do anything */ }
         }
+        R_LOCK.unlock();
         return result;
     }
 }

@@ -45,7 +45,7 @@ public class City {
     }
 
     public long get_num_for_srav() {
-        return (area + population + metersAboveSeaLevel + carCode) * (climate == null ? 1 : 2) * (standardOfLiving == null ? 1 : 2);
+        return (area + population + metersAboveSeaLevel + carCode) * (climate == null ? 1 : Climate.getIdByName(climate)) * (standardOfLiving == null ? 1 : StandardOfLiving.getIdByName(standardOfLiving));
     }
 
     @Override

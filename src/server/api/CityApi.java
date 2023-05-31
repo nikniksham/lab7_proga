@@ -19,6 +19,7 @@ public class CityApi extends BaseApi {
         Hashtable<Integer, City> table = new Hashtable<>();
         Hashtable<Integer, Integer> govers = new Hashtable<>();
         String query = "select * from city";
+        R_LOCK.lock();
         try {
             con = DriverManager.getConnection(url, user, password);
             stmt = con.createStatement();
@@ -76,13 +77,14 @@ public class CityApi extends BaseApi {
                 rs.close();
             } catch (Exception e) { /*can't do anything */ }
         }
-
+        R_LOCK.unlock();
         return table;
 
     }
 
     public static String saveTable(Hashtable<Integer, City> table) {
         String result = "ok";
+        R_LOCK.lock();
         try {
             con = DriverManager.getConnection(url, user, password);
             stmt = con.createStatement();
@@ -134,11 +136,13 @@ public class CityApi extends BaseApi {
             try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
             try { rs.close(); } catch(Exception e) { /*can't do anything */ }
         }
+        R_LOCK.unlock();
         return result;
     }
 
     public static int get_next_id() {
         String query = "SELECT nextval('CitySeq');";
+        R_LOCK.lock();
         int id = 0;
         try {
             con = DriverManager.getConnection(url, user, password);
@@ -156,6 +160,7 @@ public class CityApi extends BaseApi {
             try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
             try { rs.close(); } catch(Exception e) { /*can't do anything */ }
         }
+        R_LOCK.unlock();
         return id;
     }
 

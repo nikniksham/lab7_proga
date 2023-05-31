@@ -110,8 +110,9 @@ class Client implements Runnable {
                         }
                     }
                 } else {
+                    answer = new StringBuilder();
                     if (messageList[0].equals("register")) {
-                        answer.append(UserApi.register(messageList[1], messageList[2]));
+                        answer.append(UserApi.register(messageList[1], messageList[2]) + "\n");
                     }
                 }
                 String ans = "";
