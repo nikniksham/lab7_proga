@@ -7,6 +7,15 @@ public enum StandardOfLiving {
     ULTRA_LOW,
     NIGHTMARE;
 
+    /*
+    insert into standardofliving values
+    (1, 'VERY_HIGH', 1),
+    (2, 'HIGH', 2),
+    (3, 'VERY_LOW', 3),
+    (4, 'ULTRA_LOW', 4),
+    (5, 'NIGHTMARE', 5);
+     */
+
     public static StandardOfLiving getById(int id) {
         switch (id) {
             case 1: return VERY_HIGH;

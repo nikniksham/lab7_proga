@@ -6,7 +6,14 @@ public enum Climate {
     STEPPE,
     SUBARCTIC,
     DESERT;
-
+    /*
+    insert into climate values
+    (1, 'TROPICAL_SAVANNA'),
+    (2, 'HUMIDSUBTROPICAL'),
+    (3, 'STEPPE'),
+    (4, 'SUBARCTIC'),
+    (5, 'DESERT');
+    */
     public static Climate getById(int id) {
         switch (id) {
             case 1: return TROPICAL_SAVANNA;

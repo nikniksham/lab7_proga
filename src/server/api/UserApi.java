@@ -4,9 +4,9 @@ import java.security.MessageDigest;
 import java.sql.*;
 
 public class UserApi extends BaseApi {
-    public static String register(String login, String user_password) {
+    public static synchronized String register(String login, String user_password) {
         String result = "ok";
-        R_LOCK.lock();
+//        R_LOCK.lock();
         try {
             con = DriverManager.getConnection(url, user, password);
             stmt = con.createStatement();
@@ -25,12 +25,12 @@ public class UserApi extends BaseApi {
             try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
             try { rs.close(); } catch(Exception e) { /*can't do anything */ }
         }
-        R_LOCK.unlock();
+//        R_LOCK.unlock();
         return result;
     }
 
-    public static int login(String login, String user_password) {
-        R_LOCK.lock();
+    public static synchronized int login(String login, String user_password) {
+//        R_LOCK.lock();
         String query = "select users.password, users.status from users where users.login = '"+login+"' limit 1";
 //        System.out.println(query);
         int res = -1;
@@ -52,12 +52,12 @@ public class UserApi extends BaseApi {
             try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
             try { rs.close(); } catch(Exception e) { /*can't do anything */ }
         }
-        R_LOCK.unlock();
+//        R_LOCK.unlock();
         return res;
     }
 
-    public static int getUserId(String login) {
-        R_LOCK.lock();
+    public static synchronized int getUserId(String login) {
+//        R_LOCK.lock();
         String query = "select users.id from users where users.login = '"+login+"' limit 1";
 //        System.out.println(query);
         int res = -1;
@@ -77,7 +77,7 @@ public class UserApi extends BaseApi {
             try { stmt.close(); } catch(Exception e) { /*can't do anything */ }
             try { rs.close(); } catch(Exception e) { /*can't do anything */ }
         }
-        R_LOCK.unlock();
+//        R_LOCK.unlock();
         return res;
     }
 }

@@ -4,6 +4,7 @@ import my_programm.CustomFileReader;
 import my_programm.Manager;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import server.api.BaseApi;
 import server.api.UserApi;
 
 import java.io.*;
@@ -27,6 +28,8 @@ public class Server {
         this.clients = new ThreadPoolExecutor(0, 20, 120L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
         manager = new Manager();
         manager.load_table();
+//        BaseApi.password = CustomFileReader.readFile(".pgpass").get(0);
+//        System.out.println(CustomFileReader.readFile(".pgpass"));
 
 //        server.setSoTimeout(1000);
     }
@@ -35,10 +38,6 @@ public class Server {
         ConnectionCatcher connectionCatcher = new ConnectionCatcher(clients, server, manager);
         clients.submit(connectionCatcher);
         System.out.println("Сервер запущен");
-        while (run) {
-
-        }
-
     }
 }
 
@@ -133,9 +132,8 @@ class Client implements Runnable {
                 } else {
                     ans = answer.toString();
                 }
-                SendAnswer sendAnswer = new SendAnswer(socket, writer, ans);
-                sendAnswer.fork();
-                sendAnswer.join();
+                writer.write(ans + "end\n");
+                writer.flush();
             }
         } catch (Exception e) {
             e.printStackTrace();
